@@ -21,13 +21,13 @@ def set_up(file):
         auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
 
         api = tweepy.API(auth)
-    """
-    db_connexion = pyodbc.connect('Driver={SQL Server};'
+    
+    db_connexion = pyodbc.connect('Driver={SQL Server Native Client 11.0};'
                         'Server=localhost;'
                         'Database=tweets;'
                         'Trusted_Connection=yes;')
-    """
-    return api
+    
+    return (api,db_connexion)
     """
     cursor = db_connexion.cursor()
     cursor.execute('SELECT * FROM table_name')
@@ -66,7 +66,7 @@ def lemmatize_text(text):
 
 
 def main():
-    api = set_up("twitter_token.json.txt")
+    (api,db_connexion) = set_up("twitter_token.json.txt")
     for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='apple').items(2):
         print(tweet.text)
         clean = clean_text(tweet.text)
