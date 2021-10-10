@@ -1,34 +1,88 @@
 import tweepy
 import json
 import pyodbc 
+import pandas as pd
+import re, string
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 
-with open("twitter_token.json.txt") as f:
-   tokens = json.load(f)
 
-consumer_key = tokens["Key"]
-consumer_secret = tokens["Secret"]
+stop_words = stopwords.words('english')
+lemmatizer = WordNetLemmatizer()
 
-auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
+def set_up(file):
+    with open(file) as f:
+        tokens = json.load(f)
 
-api = tweepy.API(auth)
+        consumer_key = tokens["Key"]
+        consumer_secret = tokens["Secret"]
 
-db_connexion = pyodbc.connect('Driver={SQL Server};'
-                      'Server=localhost;'
-                      'Database=tweets;'
-                      'Trusted_Connection=yes;')
+        auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
 
-"""
-cursor = db_connexion.cursor()
-cursor.execute('SELECT * FROM table_name')
+        api = tweepy.API(auth)
+    """
+    db_connexion = pyodbc.connect('Driver={SQL Server};'
+                        'Server=localhost;'
+                        'Database=tweets;'
+                        'Trusted_Connection=yes;')
+    """
+    return api
+    """
+    cursor = db_connexion.cursor()
+    cursor.execute('SELECT * FROM table_name')
 
-for i in cursor:
-    print(i)
-"""
-for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='apple').items(1):
-    print(tweet.created_at)
-    print(tweet.id)
-    print(tweet.text)
-    print(tweet.entities["hashtags"])
-    print(tweet.user.time_zone)
-    print(tweet.retweet_count)
-    print(tweet.favorite_count)
+    for i in cursor:
+        print(i)
+    """
+
+def clean_text(text):
+    text.lower()
+    text = re.sub('RT','',text)
+    text = re.sub('@', '', text)
+    text = re.sub(r'\[.*?\]', '', text)
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
+    text = re.sub('<.*?>+', '', text)
+    text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+    text = re.sub('\n', '', text)
+    text = re.sub(r'\w*\d\w*', '', text)
+    text = re.sub(r"[^a-zA-Z ]+", "", text)
+    
+    
+    #Tokenize the data
+    text = nltk.word_tokenize(text)
+    #Remove stopwords
+    text = [word for word in text if word not in stop_words]
+    return text
+
+def lemmatize_text(text):
+    text = [lemmatizer.lemmatize(t) for t in text]
+    text = [lemmatizer.lemmatize(t, 'v') for t in text]
+    return text
+
+#def score_text(text):
+    
+#def text_to_vector(text):
+
+
+def main():
+    api = set_up("twitter_token.json.txt")
+    for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='apple').items(2):
+        print(tweet.text)
+        clean = clean_text(tweet.text)
+        print(clean)
+        print(lemmatize_text(clean))
+        """
+        print(tweet.created_at)
+        print(tweet.id)
+        print(tweet.text)
+        print(tweet.entities["hashtags"])
+        print(tweet.user.time_zone)
+        print(tweet.retweet_count)
+        print(tweet.favorite_count)
+
+    """
+        
+
+if __name__ == "__main__":
+    main()
