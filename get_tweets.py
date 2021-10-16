@@ -7,10 +7,17 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from sklearn import svm
+from sklearn.feature_extraction.text import TfidfVectorizer
+from afinn import Afinn
 
 stop_words = stopwords.words('english')
 lemmatizer = WordNetLemmatizer()
+vectorizer = TfidfVectorizer()
+afn = Afinn()
 dico = {}
+corpus = []
+labels = []
 
 def set_up(file):
     with open(file) as f:
@@ -29,13 +36,6 @@ def set_up(file):
                         'Trusted_Connection=yes;')
     
     return (api,db_connexion)
-    """
-    cursor = db_connexion.cursor()
-    cursor.execute('SELECT * FROM table_name')
-
-    for i in cursor:
-        print(i)
-    """
 
 def clean_text(text):
     text.lower()
@@ -61,49 +61,42 @@ def lemmatize_text(text):
     text = [lemmatizer.lemmatize(t, 'v') for t in text]
     return text
 
-def word_int(word):
-    if word not in dico:
-        id = len(dico) + 1
-        dico[word] = id
-    return dico[word]
-
 
 def label_text(text):
-    analyser = SentimentIntensityAnalyzer()
-    res = analyser.polarity_scores(text)
-    neg = res['neg']
-    pos = res['pos']
-    neu = res['neu']
-    if (neg > pos and neg > neu):
+    score = afn.score(text)
+
+    if (score <= -1):
         return -1
-    elif(pos >neg and pos > neu):
+    elif(score >=1):
         return 1
     else:
         return 0
     
-def text_to_vector(text):
-    return list(map(word_int,text))
+def clean_df(df):
+    df['content'] = df['content'].apply(lambda x: clean_text(x))
+    df['content'] = df['content'].apply(lambda x: lemmatize_text(x))
+    return df
+
 
 def main():
     (api,db_connexion) = set_up("twitter_token.json.txt")
-    for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='apple').items(2):
-        print(tweet.text)
-        label_text(tweet.text)
-        clean = clean_text(tweet.text)
-        text = lemmatize_text(clean)
-        print(label_text(tweet.text))
-        print(text_to_vector(text))
-        """
-        print(tweet.created_at)
-        print(tweet.id)
-        print(tweet.text)
-        print(tweet.entities["hashtags"])
-        print(tweet.user.time_zone)
-        print(tweet.retweet_count)
-        print(tweet.favorite_count)
-
-    """
+    cursor = db_connexion.cursor()
+    for brand in ['Netflix','Disney+','hbomax','OCS','Amazon prime video']:
+        for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q=brand).items(1000):
+            cursor.execute("INSERT INTO dbo.tweets values(?,?,?,?,?,?,?)",int(tweet.id),tweet.created_at,tweet.text,int(tweet.retweet_count),int(tweet.favorite_count),brand,label_text(tweet.text))
+            db_connexion.commit()
         
+    db_connexion.close()
+    """
+
+        #X = vectorizer.fit_transform(corpus)    
+        
+        clf = svm.SVC()
+        clf.fit(X, labels)
+
+        for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='Netflix').items(1):
+            clf.predict([[2., 2.]])
+        """
 
 if __name__ == "__main__":
     main()
