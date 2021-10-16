@@ -77,7 +77,7 @@ def clean_df(df):
     df['content'] = df['content'].apply(lambda x: lemmatize_text(x))
     return df
 
-
+"""
 def main():
     (api,db_connexion) = set_up("twitter_token.json.txt")
     cursor = db_connexion.cursor()
@@ -87,16 +87,17 @@ def main():
             db_connexion.commit()
         
     db_connexion.close()
-    """
+    
 
-        #X = vectorizer.fit_transform(corpus)    
+        X = vectorizer.fit_transform(corpus)    
         
         clf = svm.SVC()
         clf.fit(X, labels)
 
         for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='Netflix').items(1):
-            clf.predict([[2., 2.]])
-        """
-
+            lf.predict([[2., 2.]])
+  """      
+"""
 if __name__ == "__main__":
     main()
+"""
