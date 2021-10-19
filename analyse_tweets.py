@@ -29,26 +29,22 @@ def simple_data_analysis(tweets_df):
         sns.catplot(x="label", data=tweets_df[(tweets_df.brand == brand)], kind="count", height=6, aspect=1.5, palette="PuBuGn_d").set(title = "label distribution for brand "+ brand)
     plt.show()
 
-"""
+
 
 def word_frequency(tweets_df):
-    sr_clean = clean_df(tweets_df)
-    sr_clean.sample(5)
-    cv = CountVectorizer()
-    bow = cv.fit_transform(sr_clean)
-    word_freq = dict(zip(cv.get_feature_names(), np.asarray(bow.sum(axis=0)).ravel()))
-    word_counter = collections.Counter(word_freq)
-    word_counter_df = pd.DataFrame(word_counter.most_common(20), columns = ['word', 'freq'])
-    fig, ax = plt.subplots(figsize=(12, 10))
-    sns.barplot(x="word", y="freq", data=word_counter_df, palette="PuBuGn_d", ax=ax)
-    plt.show()
-"""
+    all_words=[]        
+    for i in range(len(tweets_df)):
+        all_words = all_words + tweets_df['content'][i]
+    nlp_words = nltk.FreqDist(all_words)
+    nlp_words.plot(20, color='salmon', title='Word Frequency')
 
+"""
 def main():
     tweets_df = retrieve_tweets()
-    tweets_df = clean_df(tweets_df)
-    simple_data_analysis(tweets_df)
-    #word_frequency(tweets_df)
+    clean = clean_df(tweets_df)
+    #simple_data_analysis(clean)
+    #word_frequency(clean)
 
 if __name__ == "__main__":
     main()
+"""

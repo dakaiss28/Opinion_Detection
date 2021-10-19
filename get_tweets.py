@@ -52,9 +52,12 @@ def clean_text(text):
     
     #Tokenize the data
     text = nltk.word_tokenize(text)
+
+    #Lemmatize text
+    text = lemmatize_text(text)
     #Remove stopwords
     text = [word for word in text if word not in stop_words]
-    return text
+    return ' '.join(text)
 
 def lemmatize_text(text):
     text = [lemmatizer.lemmatize(t) for t in text]
@@ -73,8 +76,8 @@ def label_text(text):
         return 0
     
 def clean_df(df):
-    df['content'] = df['content'].apply(lambda x: clean_text(x))
-    df['content'] = df['content'].apply(lambda x: lemmatize_text(x))
+    df['content'] = df['content'].map(lambda x: clean_text(x))
+    #df['content'] = df['content'].apply(lambda x: lemmatize_text(x))
     return df
 
 """
