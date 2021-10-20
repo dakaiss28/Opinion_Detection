@@ -16,16 +16,16 @@ The tweets are labelised using Affon library for python, with the following unde
 ## Analysing the data 
 Here is a simple analysis of the tweets in the dataBase. 
 
-![Alt text](labelDistribution.png)
-![Alt text](labelDistributionairpods.png)
-![Alt text](labelDistributionipad.png)
-![Alt text](labelDistributioniphone.png)
-![Alt text](labelDistributionmacbook.png)
+![Alt text](plots\labelDistribution.png)
+![Alt text](plots\labelDistributionairpods.png)
+![Alt text](plots\labelDistributionipad.png)
+![Alt text](plots\labelDistributioniphone.png)
+![Alt text](plots\labelDistributionmacbook.png)
 
 We can see that the label distribution is very unbalanced, with few negative tweets. 
 
 Here, the 20 most frequent words in the dataset.
-![Alt text](wordFrequency.png)
+![Alt text](plots\wordFrequency.png)
 
 ## Classification of tweets
 
