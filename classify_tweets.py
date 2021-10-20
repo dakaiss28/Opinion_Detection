@@ -13,15 +13,17 @@ def classify_tweets(tweets_df):
     Train_X_Tfidf = Tfidf_vect.transform(Train_X)
     Test_X_Tfidf = Tfidf_vect.transform(Test_X)
 
-    SVM.fit(Train_X_Tfidf,Train_Y)# predict the labels on validation dataset
-    predictions_SVM = SVM.predict(Test_X_Tfidf)# Use accuracy_score function to get the accuracy
+    SVM.fit(Train_X_Tfidf,Train_Y) # predict the labels on validation dataset
+    predictions_SVM = SVM.predict(Test_X_Tfidf) # Use accuracy_score function to get the accuracy
     print("SVM Accuracy Score -> ",accuracy_score(predictions_SVM, Test_Y)*100)
 
 def main():
+    #fecth_tweets()
     tweets_df = retrieve_tweets()
     df = clean_df(tweets_df)
-    #print(word_frequency(df))
-    classify_tweets(df)
+    #simple_data_analysis(df)
+    #word_frequency(df)
+    #classify_tweets(df)
 
 if __name__ == "__main__":  
     main()

@@ -11,7 +11,8 @@ from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from afinn import Afinn
 
-stop_words = stopwords.words('english')
+brands = ['iPhone','iPad','macbook','airPods']
+stop_words = stopwords.words('english') + brands + ['Pro','I','follow','Follow']
 lemmatizer = WordNetLemmatizer()
 vectorizer = TfidfVectorizer()
 afn = Afinn()
@@ -40,6 +41,7 @@ def set_up(file):
 def clean_text(text):
     text.lower()
     text = re.sub('RT','',text)
+    text = re.sub('rt','',text)
     text = re.sub('@', '', text)
     text = re.sub(r'\[.*?\]', '', text)
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
@@ -77,30 +79,14 @@ def label_text(text):
     
 def clean_df(df):
     df['content'] = df['content'].map(lambda x: clean_text(x))
-    #df['content'] = df['content'].apply(lambda x: lemmatize_text(x))
     return df
 
-"""
-def main():
+def fecth_tweets():
     (api,db_connexion) = set_up("twitter_token.json.txt")
     cursor = db_connexion.cursor()
-    for brand in ['Netflix','Disney+','hbomax','OCS','Amazon prime video']:
+    for brand in brands:
         for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q=brand).items(1000):
             cursor.execute("INSERT INTO dbo.tweets values(?,?,?,?,?,?,?)",int(tweet.id),tweet.created_at,tweet.text,int(tweet.retweet_count),int(tweet.favorite_count),brand,label_text(tweet.text))
             db_connexion.commit()
         
     db_connexion.close()
-    
-
-        X = vectorizer.fit_transform(corpus)    
-        
-        clf = svm.SVC()
-        clf.fit(X, labels)
-
-        for tweet in tweepy.Cursor(api.search_tweets,lang = "en", q='Netflix').items(1):
-            lf.predict([[2., 2.]])
-  """      
-"""
-if __name__ == "__main__":
-    main()
-"""
