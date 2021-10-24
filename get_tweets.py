@@ -1,14 +1,11 @@
 import tweepy
 import json
 import pyodbc
-import pandas as pd
 import re
 import string
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from afinn import Afinn
 

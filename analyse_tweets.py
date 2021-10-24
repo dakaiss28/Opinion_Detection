@@ -1,11 +1,9 @@
 import pyodbc
 import pandas as pd
-import numpy as np
 from get_tweets import *
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer
 import seaborn as sns
-import collections
+
 
 sns.set(style="darkgrid")
 sns.set(font_scale=1.3)
