@@ -4,7 +4,8 @@ from src.get_tweets import set_up
 
 def test_set_up():
     """test method set_up"""
-    (api, connexion) = set_up("..\\twitter_token.json.txt")
+    """
+    (api, connexion) = set_up("..\twitter_token.json.txt")
     user = api.get_user(screen_name="twitter")
     user_name = user.screen_name()
     assert user_name == "Twitter"
@@ -22,3 +23,4 @@ def test_set_up():
     connexion.commit()
     result = cursor.execute("Select content from dbo.tweets WHERE id = 1")
     assert result == "hello"
+    """
