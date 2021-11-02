@@ -1,8 +1,10 @@
-import tweepy
+""" this module connects to the twitter API, get tweets, clean and labelize them
+and them store them in a dataBase"""
 import json
-import pyodbc
 import re
 import string
+import pyodbc
+import tweepy
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -17,8 +19,9 @@ afn = Afinn()
 
 
 def set_up(file):
-    with open(file) as f:
-        tokens = json.load(f)
+    """setting up the application : connection to the Twitter API and the local dataBase"""
+    with open(file, encoding=str) as set_up_file:
+        tokens = json.load(set_up_file)
 
         consumer_key = tokens["Key"]
         consumer_secret = tokens["Secret"]
@@ -38,6 +41,7 @@ def set_up(file):
 
 
 def clean_text(text):
+    """cleaning tweets text"""
     text = text.lower()
     text = re.sub("RT", "", text)
     text = re.sub("rt", "", text)
@@ -45,7 +49,7 @@ def clean_text(text):
     text = re.sub(r"\[.*?\]", "", text)
     text = re.sub(r"https?://\S+|www\.\S+", "", text)
     text = re.sub("<.*?>+", "", text)
-    text = re.sub("[%s]" % re.escape(string.punctuation), "", text)
+    text = re.sub(r"[%s]" % re.escape(string.punctuation), "", text)
     text = re.sub("\n", "", text)
     text = re.sub(r"\w*\d\w*", "", text)
     text = re.sub(r"[^a-zA-Z ]+", "", text)
@@ -62,28 +66,31 @@ def clean_text(text):
 
 
 def lemmatize_text(text):
+    "lemmatize the tweets text"
     text = [lemmatizer.lemmatize(word) for word in text]
     text = [lemmatizer.lemmatize(word, "v") for word in text]
     return text
 
 
 def label_text(text):
+    "labelize the tweets using Afinn library"
     score = afn.score(text)
-
+    final_score = 0
     if score <= -1:
-        return -1
+        final_score = -1
     elif score >= 1:
-        return 1
-    else:
-        return 0
+        final_score = 1
+    return final_score
 
 
-def clean_df(df):
-    df["content"] = df["content"].map(lambda x: clean_text(x))
-    return df
+def clean_df(data_frame):
+    "iterate through the dataframe to clean the text"
+    data_frame["content"] = data_frame["content"].map(clean_text)
+    return data_frame
 
 
 def fecth_tweets():
+    "get the tweets from the API and store them in the dataBase"
     (api, db_connexion) = set_up("twitter_token.json.txt")
     cursor = db_connexion.cursor()
     for brand in brands:

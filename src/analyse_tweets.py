@@ -1,8 +1,8 @@
+""" module to make analysis on the tweets retrieved"""
+import seaborn as sns
 import pyodbc
 import pandas as pd
-from get_tweets import *
-from sklearn.feature_extraction.text import CountVectorizer
-import seaborn as sns
+import nltk
 
 
 sns.set(style="darkgrid")
@@ -10,6 +10,7 @@ sns.set(font_scale=1.3)
 
 
 def retrieve_tweets():
+    """retrieve tweets from Twitter"""
     db_connexion = pyodbc.connect(
         "Driver={SQL Server Native Client 11.0};"
         "Server=localhost;"
@@ -25,6 +26,7 @@ def retrieve_tweets():
 
 
 def simple_data_analysis(tweets_df):
+    """analyses the label distribution on data retrieved"""
     sns.catplot(
         x="label",
         data=tweets_df,
@@ -49,8 +51,9 @@ def simple_data_analysis(tweets_df):
 
 
 def word_frequency(tweets_df):
+    """analyses most frequend words in the dataset"""
     all_words = []
-    for index, row in tweets_df.iterrows():
+    for _, row in tweets_df.iterrows():
         all_words = all_words + row["content"].split()
     nlp_words = nltk.FreqDist(all_words)
     nlp_words.plot(20, color="salmon", title="Word Frequency")
