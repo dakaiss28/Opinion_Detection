@@ -10,5 +10,5 @@ def test_set_up():
     user = api.get_user(screen_name="twitter")
     user_name = user.screen_name()
     assert user_name == "Twitter"
-    # self.fail("Not implemented")
+    
     
