@@ -1,3 +1,5 @@
+![pylint linter](https://github.com/dakaiss28/Opinion_Detection/actions/workflows/pylint.yml/badge.svg)
+![pytest tests ](https://github.com/dakaiss28/Opinion_Detection/actions/workflows/python-app.yml/badge.svg)
 # Opinion_Detection
 
 The objective of this project is to build a classification tool to classify tweets about specified brands using Machine Learning algorithms. 
