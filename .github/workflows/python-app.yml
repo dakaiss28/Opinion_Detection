@@ -28,4 +28,4 @@ jobs:
     - name: Test with pytest
       run: |
         pytest test
-        pytest --cov=test --cov-fail-under=80
+        pytest --cov=test --cov-fail-under=1
