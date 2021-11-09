@@ -22,6 +22,6 @@ Here, the clustering of the dataset made by kmeans :
 
 For each class, we can see the most frequent features : 
 ![Alt text](plots/frequentWords0.png)
-![Alt text](plots/frequenWords1.png)
+![Alt text](plots/frequentWords1.png)
 ![Alt text](plots/frequentWords2.png)
 
