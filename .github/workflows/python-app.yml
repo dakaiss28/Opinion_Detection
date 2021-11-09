@@ -28,5 +28,5 @@ jobs:
         python -m nltk.downloader stopwords
     - name: Test with pytest
       run: |
-        pytest test
+        pytest src/test.py
         pytest --cov=test --cov-fail-under=1
