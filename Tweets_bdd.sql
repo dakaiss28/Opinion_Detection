@@ -13,6 +13,7 @@ CREATE TABLE dbo.tweets
  content NVARCHAR(300),
  nb_retweets INT,
  nb_fav INT,
- brand NVARCHAR(50)
+ brand NVARCHAR(50),
+ kmeans_res INT
 );
 GO

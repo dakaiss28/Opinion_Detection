@@ -1,5 +1,6 @@
 """ this module connects to the twitter API, get tweets, clean and labelize them
 and them store them in a dataBase"""
+import itertools
 import json
 import re
 import string
@@ -90,13 +91,14 @@ def fetch_tweets(conf):
     for brand in brands:
         for tweet in tweepy.Cursor(api.search_tweets, lang="en", q=brand).items(1000):
             cursor.execute(
-                "INSERT INTO dbo.tweets values(?,?,?,?,?,?)",
+                "INSERT INTO dbo.tweets values(?,?,?,?,?,?,?)",
                 int(tweet.id),
                 tweet.created_at,
                 tweet.text,
                 int(tweet.retweet_count),
                 int(tweet.favorite_count),
                 brand,
+                0,
             )
             db_connexion.commit()
     db_connexion.close()
@@ -122,7 +124,7 @@ def classify_tweets_kmeans(tweets_df):
     """This method convert the twwets text into vectors and
     then classify them using K Means classifier"""
 
-    kmeans_classifier = KMeans(n_clusters=3, max_iter=600, algorithm="full")
+    kmeans_classifier = KMeans(n_clusters=3, max_iter=600, random_state=1)
     pca = PCA(n_components=2)
 
     tfidf_vect = TfidfVectorizer(max_features=5000)
@@ -134,6 +136,10 @@ def classify_tweets_kmeans(tweets_df):
     fitted = kmeans_classifier.fit(y_learn)
     prediction = kmeans_classifier.predict(y_learn)
 
+    res = []
+    for id, result in itertools.zip_longest(tweets_df["tweet_id"], fitted.labels_):
+        res.append({"id": id, "label": result})
+    results = pd.DataFrame(res, columns=["id", "label"])
     plt.scatter(y_learn[:, 0], y_learn[:, 1], c=prediction, s=50, cmap="viridis")
     centers = fitted.cluster_centers_
     plt.scatter(centers[:, 0], centers[:, 1], c="black", s=300, alpha=0.6)
@@ -148,6 +154,7 @@ def classify_tweets_kmeans(tweets_df):
         )
         # plt.show()
         plt.savefig("../plots/frequentWords{}.png".format(label))
+    return results
 
 
 def get_top_features_cluster(tf_idf_array, prediction, label, tfidf_vect, n_feats):
@@ -162,12 +169,23 @@ def get_top_features_cluster(tf_idf_array, prediction, label, tfidf_vect, n_feat
     return pd.DataFrame(best_features, columns=["features", "score"])
 
 
+def store_results(result, conf):
+    (_, connexion) = set_up(conf)
+    cursor = connexion.cursor()
+    for (id, label) in result:
+        cursor.execute(
+            "UPDATE dbo.tweets SET kmeans_res = ? WHERE dbo.tweets.id = ?", label, id
+        )
+    connexion.commit()
+    connexion.close()
+
+
 def main():
     """main method"""
     # fetch_tweets("../twitter_token.json.txt")
     tweets_df = retrieve_tweets()
     data_frame = clean_df(tweets_df)
-    classify_tweets_kmeans(data_frame)
+    print(classify_tweets_kmeans(data_frame))
 
 
 if __name__ == "__main__":
