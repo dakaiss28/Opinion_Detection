@@ -22,9 +22,9 @@ Here, the clustering of the dataset made by kmeans :
 ![Alt text](plots/distributionCount.png)
 
 The overtime repartition is :
-![Alt text](plots/overtimeRepartiton0.png)
-![Alt text](plots/overtimeRepartiton1.png)
-![Alt text](plots/overtimeRepartiton2.png)
+![Alt text](plots/overtimeRepartition0.png)
+![Alt text](plots/overtimeRepartition1.png)
+![Alt text](plots/overtimeRepartition2.png)
 
 For each class, we can see the most frequent features : 
 ![Alt text](plots/frequentWords0.png)
