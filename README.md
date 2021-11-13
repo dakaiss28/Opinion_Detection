@@ -1,5 +1,5 @@
 ![pylint linter](https://github.com/dakaiss28/Opinion_Detection/actions/workflows/pylint.yml/badge.svg)
-![pytest tests ](https://github.com/dakaiss28/Opinion_Detection/actions/workflows/python-app.yml/badge.svg)
+
 
 ## DISCLAIMER
 Work in progress !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
