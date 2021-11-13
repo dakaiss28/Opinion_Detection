@@ -19,6 +19,12 @@ Labellizing tweets manually would be a time consuming task.
 Classification here is made with unsupervised learning, using kmeans algorithm. 
 Here, the clustering of the dataset made by kmeans : 
 ![Alt text](plots/labelDistribution.png)
+![Alt text](plots/distributionCount.png)
+
+The overtime repartition is :
+![Alt text](plots/overtimeRepartiton0.png)
+![Alt text](plots/overtimeRepartiton1.png)
+![Alt text](plots/overtimeRepartiton2.png)
 
 For each class, we can see the most frequent features : 
 ![Alt text](plots/frequentWords0.png)

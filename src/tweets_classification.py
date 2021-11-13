@@ -185,16 +185,12 @@ def store_results(result, conf):
 def temporal_evolution(conf):
     (_, connexion) = set_up(conf)
     results = pd.read_sql("SELECT created_at,kmeans_res FROM dbo.tweets", connexion)
-    results["created_at"].apply(lambda x: x.timestamp())
+    # results["created_at"].apply(lambda x: x.timestamp())
 
-    # results["kmeans_res"].value_counts().plot(kind="barh")
+    sns.countplot(x="kmeans_res", data=results).set(title="Label repartition ")
+    plt.savefig("../plots/distributionCount.png")
     dates = pd.read_sql("SELECT created_at FROM dbo.tweets", connexion)
-    """
-    dates["created_at"] = (
-        dates["created_at"].apply(lambda x: x.date()).drop_duplicates()
-    )
-    print(dates)
-    """
+
     results2 = pd.DataFrame()
     for _, row in dates.iterrows():
         results2 = results2.append(
@@ -205,17 +201,11 @@ def temporal_evolution(conf):
             )
         )
 
-    # sns.lineplot(data=results2, hue="kmeans_res", x="created_at", y="count_res")
-    # results2.groupby("kmeans_res").plot(x="created_at", y="count_res")
-    # plt.plot_date(results2["created_at"], results2["count_res"])
-
-    fig, ax = plt.subplots()
+    # plt.show()
 
     for km, gp in results2.groupby("kmeans_res"):
-        gp.plot(x="created_at", y="count_res", ax=ax, label=km)
-    # results2.pivot(index="created_at", columns="kmeans_res", values="count_res").plot()
-
-    plt.show()
+        gp.plot(x="created_at", y="count_res", label=km)
+        plt.savefig("../plots/overtimeRepartition{}.png".format(km))
 
 
 def main():
