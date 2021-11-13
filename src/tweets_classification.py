@@ -89,16 +89,16 @@ def fetch_tweets(conf):
     (api, db_connexion) = set_up(conf)
     cursor = db_connexion.cursor()
     for brand in brands:
-        for tweet in tweepy.Cursor(api.search_tweets, lang="en", q=brand).items(1000):
+        for tweet in tweepy.Cursor(api.search_tweets, lang="en", q=brand).items(3000):
             cursor.execute(
                 "INSERT INTO dbo.tweets values(?,?,?,?,?,?,?)",
-                int(tweet.id),
+                tweet.id_str,
                 tweet.created_at,
                 tweet.text,
                 int(tweet.retweet_count),
                 int(tweet.favorite_count),
                 brand,
-                0,
+                -1,
             )
             db_connexion.commit()
     db_connexion.close()
@@ -172,20 +172,60 @@ def get_top_features_cluster(tf_idf_array, prediction, label, tfidf_vect, n_feat
 def store_results(result, conf):
     (_, connexion) = set_up(conf)
     cursor = connexion.cursor()
-    for (id, label) in result:
+    for _, row in result.iterrows():
         cursor.execute(
-            "UPDATE dbo.tweets SET kmeans_res = ? WHERE dbo.tweets.id = ?", label, id
+            "UPDATE dbo.tweets SET kmeans_res = ? WHERE tweet_id = ?",
+            row["label"],
+            row["id"],
         )
     connexion.commit()
     connexion.close()
 
 
+def temporal_evolution(conf):
+    (_, connexion) = set_up(conf)
+    results = pd.read_sql("SELECT created_at,kmeans_res FROM dbo.tweets", connexion)
+    results["created_at"].apply(lambda x: x.timestamp())
+
+    # results["kmeans_res"].value_counts().plot(kind="barh")
+    dates = pd.read_sql("SELECT created_at FROM dbo.tweets", connexion)
+    """
+    dates["created_at"] = (
+        dates["created_at"].apply(lambda x: x.date()).drop_duplicates()
+    )
+    print(dates)
+    """
+    results2 = pd.DataFrame()
+    for _, row in dates.iterrows():
+        results2 = results2.append(
+            pd.read_sql(
+                "SELECT  count(kmeans_res) as count_res, created_at, kmeans_res FROM dbo.tweets where created_at = ? group by kmeans_res,created_at ",
+                connexion,
+                params=[row["created_at"]],
+            )
+        )
+
+    # sns.lineplot(data=results2, hue="kmeans_res", x="created_at", y="count_res")
+    # results2.groupby("kmeans_res").plot(x="created_at", y="count_res")
+    # plt.plot_date(results2["created_at"], results2["count_res"])
+
+    fig, ax = plt.subplots()
+
+    for km, gp in results2.groupby("kmeans_res"):
+        gp.plot(x="created_at", y="count_res", ax=ax, label=km)
+    # results2.pivot(index="created_at", columns="kmeans_res", values="count_res").plot()
+
+    plt.show()
+
+
 def main():
     """main method"""
     # fetch_tweets("../twitter_token.json.txt")
-    tweets_df = retrieve_tweets()
-    data_frame = clean_df(tweets_df)
-    print(classify_tweets_kmeans(data_frame))
+    # tweets_df = retrieve_tweets()
+    # data_frame = clean_df(tweets_df)
+    # results = classify_tweets_kmeans(data_frame)
+    # store_results(results, "../twitter_token.json.txt")
+    temporal_evolution("../twitter_token.json.txt")
 
 
 if __name__ == "__main__":

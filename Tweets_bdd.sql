@@ -8,7 +8,7 @@ GO
 -- Create the table in the specified schema
 CREATE TABLE dbo.tweets
 (
- tweet_id BIGINT NOT NULL,
+ tweet_id NVARCHAR(50) NOT NULL,
  created_at DATETIME,
  content NVARCHAR(300),
  nb_retweets INT,
