@@ -14,9 +14,14 @@ The tweets are labelised in to 3 categories : positive, negative and neutral.
 Data are fetched using the twitter API, with specific secret tokens that are for personal use. 
 The storage is then done in a SQL Server local dataBase. In total, 1000 tweets are saved for each brand. 
 
+## Preview of the dataset
+The main words in the dataset are : 
+![Alt text](plots/cloud.png)
+
 ## Classification of tweets
 Labellizing tweets manually would be a time consuming task.
-Classification here is made with unsupervised learning, using kmeans algorithm. 
+Text is transformed with word2vec model.
+Clustering is made with unsupervised learning, using kmeans algorithm. 
 Here, the clustering of the dataset made by kmeans : 
 ![Alt text](plots/labelDistribution.png)
 ![Alt text](plots/distributionCount.png)
