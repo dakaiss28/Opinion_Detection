@@ -13,13 +13,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
+from wordcloud import WordCloud
 
-brands = ["iPhone", "iPad", "macbook", "airPods"]
-stop_words = stopwords.words("english") + brands + ["Pro", "I", "follow", "Follow"]
+brands = ["grammys"]
+stop_words = stopwords.words("english") + brands
 lemmatizer = WordNetLemmatizer()
 vectorizer = TfidfVectorizer()
 
@@ -44,6 +46,29 @@ def set_up(conf):
     )
 
     return (api, db_connexion)
+
+
+def plot_word_cloud(text, fichier):
+
+    # Définir le calque du nuage des mots
+    wc = WordCloud(
+        width=600,
+        height=600,
+        background_color="white",
+        max_words=200,
+        stopwords=stop_words,
+        max_font_size=90,
+        collocations=False,
+        random_state=42,
+    )
+
+    # Générer et afficher le nuage de mots
+    plt.figure(figsize=(15, 20))
+    wc.generate(text)
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+    plt.show()
+    plt.savefig(fichier)
 
 
 def clean_text(text):
@@ -89,7 +114,9 @@ def fetch_tweets(conf):
     (api, db_connexion) = set_up(conf)
     cursor = db_connexion.cursor()
     for brand in brands:
-        for tweet in tweepy.Cursor(api.search_tweets, lang="en", q=brand).items(3000):
+        for tweet in tweepy.Cursor(
+            api.search_tweets, lang="en", q=brand, result_type="mixed"
+        ).items(6000):
             cursor.execute(
                 "INSERT INTO dbo.tweets values(?,?,?,?,?,?,?)",
                 tweet.id_str,
@@ -120,7 +147,30 @@ def retrieve_tweets():
     return tweets_df
 
 
-def classify_tweets_kmeans(tweets_df):
+def train_word2vec(tweets_df):
+    data = tweets_df["content"].map(lambda x: x.split(" ")).tolist()
+    model = Word2Vec(sentences=data, vector_size=100, workers=1, seed=1)
+    features = []
+
+    for tokens in data:
+        zero_vector = np.zeros(model.vector_size)
+        vectors = []
+        for token in tokens:
+            if token in model.wv:
+                try:
+                    vectors.append(model.wv[token])
+                except KeyError:
+                    continue
+        if vectors:
+            vectors = np.asarray(vectors)
+            avg_vec = vectors.mean(axis=0)
+            features.append(avg_vec)
+        else:
+            features.append(zero_vector)
+    return features
+
+
+def classify_tweets_kmeans(features, tweets_df):
     """This method convert the twwets text into vectors and
     then classify them using K Means classifier"""
 
@@ -131,10 +181,9 @@ def classify_tweets_kmeans(tweets_df):
     tf_idf = tfidf_vect.fit_transform(tweets_df["content"])
     tf_idf_norm = normalize(tf_idf)
     tf_idf_array = tf_idf_norm.toarray()
-
     y_learn = pca.fit_transform(tf_idf_array)
-    fitted = kmeans_classifier.fit(y_learn)
-    prediction = kmeans_classifier.predict(y_learn)
+    fitted = kmeans_classifier.fit(features)
+    prediction = kmeans_classifier.predict(features)
 
     res = []
     for id, result in itertools.zip_longest(tweets_df["tweet_id"], fitted.labels_):
@@ -152,8 +201,8 @@ def classify_tweets_kmeans(tweets_df):
         sns.barplot(x="score", y="features", orient="h", data=dfs).set(
             title="top features for class {}".format(label)
         )
-        # plt.show()
         plt.savefig("../plots/frequentWords{}.png".format(label))
+    plt.show()
     return results
 
 
@@ -201,7 +250,7 @@ def temporal_evolution(conf):
             )
         )
 
-    # plt.show()
+    plt.show()
 
     for km, gp in results2.groupby("kmeans_res"):
         gp.plot(x="created_at", y="count_res", label=km)
@@ -211,10 +260,12 @@ def temporal_evolution(conf):
 def main():
     """main method"""
     # fetch_tweets("../twitter_token.json.txt")
-    # tweets_df = retrieve_tweets()
-    # data_frame = clean_df(tweets_df)
-    # results = classify_tweets_kmeans(data_frame)
-    # store_results(results, "../twitter_token.json.txt")
+    tweets_df = retrieve_tweets()
+    data_frame = clean_df(tweets_df)
+    plot_word_cloud(str(data_frame["content"].values), "../plots/cloud.png")
+    features = train_word2vec(data_frame)
+    results = classify_tweets_kmeans(features, data_frame)
+    store_results(results, "../twitter_token.json.txt")
     temporal_evolution("../twitter_token.json.txt")
 
 
