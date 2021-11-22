@@ -49,8 +49,7 @@ def set_up(conf):
 
 
 def plot_word_cloud(text, fichier):
-
-    # Définir le calque du nuage des mots
+    """plot word could"""
     wc = WordCloud(
         width=600,
         height=600,
@@ -148,6 +147,7 @@ def retrieve_tweets():
 
 
 def train_word2vec(tweets_df):
+    """transform the texts into vector using word2vec model"""
     data = tweets_df["content"].map(lambda x: x.split(" ")).tolist()
     model = Word2Vec(sentences=data, vector_size=100, workers=1, seed=1)
     features = []
@@ -219,6 +219,7 @@ def get_top_features_cluster(tf_idf_array, prediction, label, tfidf_vect, n_feat
 
 
 def store_results(result, conf):
+    """store kmeans results in dataBase table"""
     (_, connexion) = set_up(conf)
     cursor = connexion.cursor()
     for _, row in result.iterrows():
@@ -232,6 +233,7 @@ def store_results(result, conf):
 
 
 def temporal_evolution(conf):
+    """plot the temporal evolution of labels"""
     (_, connexion) = set_up(conf)
     results = pd.read_sql("SELECT created_at,kmeans_res FROM dbo.tweets", connexion)
     # results["created_at"].apply(lambda x: x.timestamp())
