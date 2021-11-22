@@ -12,7 +12,8 @@ The tweets are labelised in to 3 categories : positive, negative and neutral.
 
 ## Getting and storing the data
 Data are fetched using the twitter API, with specific secret tokens that are for personal use. 
-The storage is then done in a SQL Server local dataBase. In total, 1000 tweets are saved for each brand. 
+The storage is then done in a SQL Server local dataBase. 
+The dataBase contains 6000 tweets.
 
 ## Preview of the dataset
 The main words in the dataset are : 
