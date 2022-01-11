@@ -5,6 +5,7 @@ import json
 import re
 import string
 import pyodbc
+from sklearn.utils import shuffle
 import tweepy
 import nltk
 from nltk.corpus import stopwords
@@ -18,9 +19,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
+from sklearn.model_selection import train_test_split
+from sklearn import datasets, svm
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 from wordcloud import WordCloud
 
-brands = ["grammys"]
+brands = ["nigeria"]
 stop_words = stopwords.words("english") + brands
 lemmatizer = WordNetLemmatizer()
 vectorizer = TfidfVectorizer()
@@ -29,8 +33,8 @@ vectorizer = TfidfVectorizer()
 def set_up(conf):
     """setting up the application : connection to the Twitter API and the local dataBase"""
     with open(conf) as set_up_file:
-        tokens = json.load(set_up_file)
 
+        tokens = json.load(set_up_file)
         consumer_key = tokens["Key"]
         consumer_secret = tokens["Secret"]
 
@@ -66,7 +70,7 @@ def plot_word_cloud(text, fichier):
     wc.generate(text)
     plt.imshow(wc, interpolation="bilinear")
     plt.axis("off")
-    plt.show()
+    # plt.show()
     plt.savefig(fichier)
 
 
@@ -114,16 +118,20 @@ def fetch_tweets(conf):
     cursor = db_connexion.cursor()
     for brand in brands:
         for tweet in tweepy.Cursor(
-            api.search_tweets, lang="en", q=brand, result_type="mixed"
+            api.search_tweets, lang="en", q=brand, result_type="recent"
         ).items(6000):
+            print(tweet.text)
+            label = input("Label : ")
             cursor.execute(
-                "INSERT INTO dbo.tweets values(?,?,?,?,?,?,?)",
+                "INSERT INTO dbo.tweets values(?,?,?,?,?,?,?,?,?)",
                 tweet.id_str,
                 tweet.created_at,
                 tweet.text,
                 int(tweet.retweet_count),
                 int(tweet.favorite_count),
                 brand,
+                int(label),
+                -1,
                 -1,
             )
             db_connexion.commit()
@@ -170,6 +178,32 @@ def train_word2vec(tweets_df):
     return features
 
 
+def classify_tweets_svm(tweets_df):
+    Train_X, Test_X, Train_Y, Test_Y = train_test_split(
+        tweets_df["content"], tweets_df["target_label"], test_size=0.3
+    )
+    SVM = svm.SVC(C=1.0, kernel="linear", degree=3, gamma="auto")
+
+    Tfidf_vect = TfidfVectorizer(max_features=5000)
+    Tfidf_vect.fit(tweets_df["content"])
+    Train_X_Tfidf = Tfidf_vect.transform(Train_X)
+    Test_X_Tfidf = Tfidf_vect.transform(Test_X)
+
+    SVM.fit(Train_X_Tfidf, Train_Y)  # predict the labels on validation dataset
+    predictions_SVM = SVM.predict(Test_X_Tfidf)  # Use accuracy_score function to get the accuracy
+
+    accuracy = accuracy_score(Test_Y, predictions_SVM)
+    precision = precision_score(Test_Y, predictions_SVM, average=None)
+    recall = recall_score(Test_Y, predictions_SVM, average=None)
+    sns.countplot(Test_Y)
+    plt.savefig("../plots/SVMdistributionTrue.png")
+    sns.countplot(predictions_SVM)
+    plt.savefig("../plots/SVMdistributionPred.png")
+    print("accuracy for SVM classifier : {}".format(accuracy))
+    print("precision for SVM classifier : {}".format(precision))
+    print("recall for SVM classifier : {}".format(recall))
+
+
 def classify_tweets_kmeans(features, tweets_df):
     """This method convert the twwets text into vectors and
     then classify them using K Means classifier"""
@@ -185,6 +219,10 @@ def classify_tweets_kmeans(features, tweets_df):
     fitted = kmeans_classifier.fit(features)
     prediction = kmeans_classifier.predict(features)
 
+    return (y_learn, fitted, prediction, tf_idf_array, tfidf_vect)
+
+
+def plot_kmean_results(tweets_df, y_learn, fitted, prediction, tf_idf_array, tfidf_vect):
     res = []
     for id, result in itertools.zip_longest(tweets_df["tweet_id"], fitted.labels_):
         res.append({"id": id, "label": result})
@@ -209,22 +247,20 @@ def classify_tweets_kmeans(features, tweets_df):
 def get_top_features_cluster(tf_idf_array, prediction, label, tfidf_vect, n_feats):
     """get top features per cluster"""
     id_temp = np.where(prediction == label)  # indices for each cluster
-    x_means = np.mean(
-        tf_idf_array[id_temp], axis=0
-    )  # returns average score across cluster
+    x_means = np.mean(tf_idf_array[id_temp], axis=0)  # returns average score across cluster
     sorted_means = np.argsort(x_means)[::-1][:n_feats]  # indices with top 20 scores
     features = tfidf_vect.get_feature_names_out()
     best_features = [(features[i], x_means[i]) for i in sorted_means]
     return pd.DataFrame(best_features, columns=["features", "score"])
 
 
-def store_results(result, conf):
+def store_results(result, conf, model):
     """store kmeans results in dataBase table"""
     (_, connexion) = set_up(conf)
     cursor = connexion.cursor()
     for _, row in result.iterrows():
         cursor.execute(
-            "UPDATE dbo.tweets SET kmeans_res = ? WHERE tweet_id = ?",
+            "UPDATE dbo.tweets SET " + model + " = ? WHERE tweet_id = ?",
             row["label"],
             row["id"],
         )
@@ -264,10 +300,17 @@ def main():
     # fetch_tweets("../twitter_token.json.txt")
     tweets_df = retrieve_tweets()
     data_frame = clean_df(tweets_df)
-    plot_word_cloud(str(data_frame["content"].values), "../plots/cloud.png")
+    # plot_word_cloud(str(data_frame["content"].values), "../plots/cloud.png")
     features = train_word2vec(data_frame)
-    results = classify_tweets_kmeans(features, data_frame)
-    store_results(results, "../twitter_token.json.txt")
+    (y_learn, fitted, prediction, tf_idf_array, tfidf_vect) = classify_tweets_kmeans(
+        features, data_frame
+    )
+    results_kmean = plot_kmean_results(
+        data_frame, y_learn, fitted, prediction, tf_idf_array, tfidf_vect
+    )
+    store_results(results_kmean, "../twitter_token.json.txt", "kmeans_res")
+    classify_tweets_svm(data_frame)
+
     temporal_evolution("../twitter_token.json.txt")
 
 
