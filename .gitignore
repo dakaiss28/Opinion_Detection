@@ -12,6 +12,7 @@ build/
 develop-eggs/
 dist/
 downloads/
+myenv/
 eggs/
 .eggs/
 lib/
@@ -127,3 +128,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#project doc
+tweets.csv
+poubelle.py.txt
+twitter_token.json.txt

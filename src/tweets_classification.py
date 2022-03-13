@@ -1,12 +1,9 @@
 """ this module connects to the twitter API, get tweets, clean and labelize them
-and them store them in a dataBase"""
+and then store them in a dataBase"""
 import itertools
-import json
 import re
 import string
-import pyodbc
 from sklearn.utils import shuffle
-import tweepy
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -20,58 +17,14 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
 from sklearn.model_selection import train_test_split
-from sklearn import datasets, svm
+from sklearn import svm
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+from utils import *
 from wordcloud import WordCloud
 
-brands = ["nigeria"]
 stop_words = stopwords.words("english") + brands
 lemmatizer = WordNetLemmatizer()
 vectorizer = TfidfVectorizer()
-
-
-def set_up(conf):
-    """setting up the application : connection to the Twitter API and the local dataBase"""
-    with open(conf) as set_up_file:
-
-        tokens = json.load(set_up_file)
-        consumer_key = tokens["Key"]
-        consumer_secret = tokens["Secret"]
-
-        auth = tweepy.AppAuthHandler(consumer_key, consumer_secret)
-
-        api = tweepy.API(auth)
-
-    db_connexion = pyodbc.connect(
-        "Driver={SQL Server Native Client 11.0};"
-        "Server=localhost;"
-        "Database=tweets;"
-        "Trusted_Connection=yes;"
-    )
-
-    return (api, db_connexion)
-
-
-def plot_word_cloud(text, fichier):
-    """plot word could"""
-    wc = WordCloud(
-        width=600,
-        height=600,
-        background_color="white",
-        max_words=200,
-        stopwords=stop_words,
-        max_font_size=90,
-        collocations=False,
-        random_state=42,
-    )
-
-    # Générer et afficher le nuage de mots
-    plt.figure(figsize=(15, 20))
-    wc.generate(text)
-    plt.imshow(wc, interpolation="bilinear")
-    plt.axis("off")
-    # plt.show()
-    plt.savefig(fichier)
 
 
 def clean_text(text):
@@ -112,46 +65,26 @@ def clean_df(data_frame):
     return data_frame
 
 
-def fetch_tweets(conf):
-    "get the tweets from the API and store them in the dataBase"
-    (api, db_connexion) = set_up(conf)
-    cursor = db_connexion.cursor()
-    for brand in brands:
-        for tweet in tweepy.Cursor(
-            api.search_tweets, lang="en", q=brand, result_type="recent"
-        ).items(6000):
-            print(tweet.text)
-            label = input("Label : ")
-            cursor.execute(
-                "INSERT INTO dbo.tweets values(?,?,?,?,?,?,?,?,?)",
-                tweet.id_str,
-                tweet.created_at,
-                tweet.text,
-                int(tweet.retweet_count),
-                int(tweet.favorite_count),
-                brand,
-                int(label),
-                -1,
-                -1,
-            )
-            db_connexion.commit()
-    db_connexion.close()
-
-
-def retrieve_tweets():
-    """retrieve tweets from Twitter"""
-    db_connexion = pyodbc.connect(
-        "Driver={SQL Server Native Client 11.0};"
-        "Server=localhost;"
-        "Database=tweets;"
-        "Trusted_Connection=yes;"
+def plot_word_cloud(text, fichier):
+    """plot word could"""
+    wc = WordCloud(
+        width=600,
+        height=600,
+        background_color="white",
+        max_words=200,
+        stopwords=stop_words,
+        max_font_size=90,
+        collocations=False,
+        random_state=42,
     )
 
-    query = "SELECT * FROM dbo.tweets"
-    tweets_df = pd.read_sql(query, db_connexion)
-    tweets_df.drop_duplicates()
-    db_connexion.close()
-    return tweets_df
+    # Générer et afficher le nuage de mots
+    plt.figure(figsize=(15, 20))
+    wc.generate(text)
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+    # plt.show()
+    plt.savefig(fichier)
 
 
 def train_word2vec(tweets_df):
@@ -179,6 +112,7 @@ def train_word2vec(tweets_df):
 
 
 def classify_tweets_svm(tweets_df):
+    "this methods classifies tweets using SVM method"
     Train_X, Test_X, Train_Y, Test_Y = train_test_split(
         tweets_df["content"], tweets_df["target_label"], test_size=0.3
     )
@@ -190,7 +124,9 @@ def classify_tweets_svm(tweets_df):
     Test_X_Tfidf = Tfidf_vect.transform(Test_X)
 
     SVM.fit(Train_X_Tfidf, Train_Y)  # predict the labels on validation dataset
-    predictions_SVM = SVM.predict(Test_X_Tfidf)  # Use accuracy_score function to get the accuracy
+    predictions_SVM = SVM.predict(
+        Test_X_Tfidf
+    )  # Use accuracy_score function to get the accuracy
 
     accuracy = accuracy_score(Test_Y, predictions_SVM)
     precision = precision_score(Test_Y, predictions_SVM, average=None)
@@ -222,7 +158,10 @@ def classify_tweets_kmeans(features, tweets_df):
     return (y_learn, fitted, prediction, tf_idf_array, tfidf_vect)
 
 
-def plot_kmean_results(tweets_df, y_learn, fitted, prediction, tf_idf_array, tfidf_vect):
+def plot_kmean_results(
+    tweets_df, y_learn, fitted, prediction, tf_idf_array, tfidf_vect
+):
+    """plots kmean results : the label distribution and frequent words for each class"""
     res = []
     for id, result in itertools.zip_longest(tweets_df["tweet_id"], fitted.labels_):
         res.append({"id": id, "label": result})
@@ -247,60 +186,30 @@ def plot_kmean_results(tweets_df, y_learn, fitted, prediction, tf_idf_array, tfi
 def get_top_features_cluster(tf_idf_array, prediction, label, tfidf_vect, n_feats):
     """get top features per cluster"""
     id_temp = np.where(prediction == label)  # indices for each cluster
-    x_means = np.mean(tf_idf_array[id_temp], axis=0)  # returns average score across cluster
+    x_means = np.mean(
+        tf_idf_array[id_temp], axis=0
+    )  # returns average score across cluster
     sorted_means = np.argsort(x_means)[::-1][:n_feats]  # indices with top 20 scores
     features = tfidf_vect.get_feature_names_out()
     best_features = [(features[i], x_means[i]) for i in sorted_means]
     return pd.DataFrame(best_features, columns=["features", "score"])
 
 
-def store_results(result, conf, model):
-    """store kmeans results in dataBase table"""
-    (_, connexion) = set_up(conf)
-    cursor = connexion.cursor()
-    for _, row in result.iterrows():
-        cursor.execute(
-            "UPDATE dbo.tweets SET " + model + " = ? WHERE tweet_id = ?",
-            row["label"],
-            row["id"],
-        )
-    connexion.commit()
-    connexion.close()
-
-
-def temporal_evolution(conf):
-    """plot the temporal evolution of labels"""
-    (_, connexion) = set_up(conf)
-    results = pd.read_sql("SELECT created_at,kmeans_res FROM dbo.tweets", connexion)
-    # results["created_at"].apply(lambda x: x.timestamp())
+def get_label_repartition_kmeans(connexion):
+    "get kmeans label distribution"
+    query = "SELECT created_at,kmeans_res FROM dbo.tweets"
+    results = pd.read_sql(query, connexion)
 
     sns.countplot(x="kmeans_res", data=results).set(title="Label repartition ")
     plt.savefig("../plots/distributionCount.png")
-    dates = pd.read_sql("SELECT created_at FROM dbo.tweets", connexion)
-
-    results2 = pd.DataFrame()
-    for _, row in dates.iterrows():
-        results2 = results2.append(
-            pd.read_sql(
-                "SELECT  count(kmeans_res) as count_res, created_at, kmeans_res FROM dbo.tweets where created_at = ? group by kmeans_res,created_at ",
-                connexion,
-                params=[row["created_at"]],
-            )
-        )
-
-    plt.show()
-
-    for km, gp in results2.groupby("kmeans_res"):
-        gp.plot(x="created_at", y="count_res", label=km)
-        plt.savefig("../plots/overtimeRepartition{}.png".format(km))
 
 
 def main():
     """main method"""
-    # fetch_tweets("../twitter_token.json.txt")
+    _, db_connexion = set_up("../twitter_token.json.txt")
     tweets_df = retrieve_tweets()
     data_frame = clean_df(tweets_df)
-    # plot_word_cloud(str(data_frame["content"].values), "../plots/cloud.png")
+    plot_word_cloud(str(data_frame["content"].values), "../plots/cloud.png")
     features = train_word2vec(data_frame)
     (y_learn, fitted, prediction, tf_idf_array, tfidf_vect) = classify_tweets_kmeans(
         features, data_frame
@@ -310,8 +219,7 @@ def main():
     )
     store_results(results_kmean, "../twitter_token.json.txt", "kmeans_res")
     classify_tweets_svm(data_frame)
-
-    temporal_evolution("../twitter_token.json.txt")
+    get_label_repartition_kmeans(db_connexion)
 
 
 if __name__ == "__main__":
